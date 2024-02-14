@@ -1,0 +1,24 @@
+{
+    "name": "malaita", // Base name for the generated .mbtiles file
+    "style": "planet", // Map style to be used for tile generation
+    "monthyear": "2023-12", // Month and year for which the tiles are generated, in YYYY-MM format
+    "bounds": "160.729980,-9.595334,161.415253,-8.886428", // Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
+    "zoom_level": "16", // Zoom level for which the tiles will be generated
+    // "minzoom": "", // Minimum zoom level for which the tiles will be generated
+    // "maxzoom": "", // Maximum zoom level for which the tiles will be generated
+    // "tile_format": "", // Format of the tiles to generate (e.g., "png", "jpg")
+    // "scale": "", // Scale factor for the tiles (e.g., "1", "2" for @2x tiles)
+    // "tile_size": "", // Size of the tiles in pixels (e.g., "256", "512")
+    // "attribution": "", // Attribution to be included in the tiles metadata
+    // "logo": "", // URL to a logo image to be included in the tiles metadata
+    // "bounds": "", // Overriding the bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
+    // "center": "", // Center of the map in "longitude,latitude,zoom" format
+    // "pixel_ratio": "", // Pixel ratio to consider for retina displays
+    // "language": "", // Language to be used for map labels
+    "ssh": {
+        "host": "cloud.earthdefenderstoolkit.com", // Hostname or IP address of the SSH server
+        "username": "root", // Username for SSH authentication
+        "port": 22, // Port number for the SSH server
+        "target": "/mnt/volume_nyc1_01/data/content/partners/malaita/tiles/" // Target directory on the SSH server where the tiles will be stored
+    }
+}
