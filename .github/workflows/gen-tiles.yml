@@ -71,9 +71,9 @@ jobs:
               sshInfo = {}; // Set to an empty object to avoid null references
             }
             core.setOutput('useSSH', useSSH);
-            const tileConfig = manifest.tiles.find(tile => tile.name === tileName);
+            const tileConfig = manifest.tiles.find(tile => tile.name === TILE_NAME);
             if (!tileConfig) {
-              throw new Error(`Tile configuration for '${tileName}' not found.`);
+              throw new Error(`Tile configuration for '${TILE_NAME}' not found.`);
             }
             const zoomLevel = (ACTION_TYPE == 'push') ? '5' : tileConfig.zoom_level;
             const commandParts = [

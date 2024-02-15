@@ -18,12 +18,14 @@ When ready to build the tiles, head to the `Actions` tab, select the `Generate T
 
 ## Setting up Secrets
 
-In your new repository, set up the following secrets:
+In your new repository, you will need to set up secrets to securely store sensitive information:
 
-- `API_KEY`: The API key for accessing the tile rendering service (e.g., Planet, Mapbox, Google).
+- `API_KEY`: The default API key for accessing the tile rendering service (e.g., Planet, Mapbox, Google). If you are using multiple services, you may add additional API keys as secrets with distinct names (e.g., `MAPBOX_API_KEY`, `GOOGLE_API_KEY`).
 - `SSH_KEY`: The private SSH key that corresponds to the public key added to the server for secure file transfer.
 
-Navigate to your repository settings, access the "Secrets" section, and add new repository secrets with the names `API_KEY` and `SSH_KEY`.
+To add these secrets, navigate to your repository settings, access the "Secrets" section, and click on "New repository secret". Add each secret with the appropriate name (`API_KEY`, `SSH_KEY`, etc.).
+
+Additionally, in the `manifest.json` file, you can specify which API key to use for each tile set by setting the `apiKeySecret` option to the name of the secret that contains the desired API key. If `apiKeySecret` is not specified, it will default to using `API_KEY`.
 
 ![adding github action secrets](https://www.edwardthomson.com/blog/images/githubactions/11-addingsecret.png)
 
