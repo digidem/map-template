@@ -80,13 +80,13 @@ jobs:
               `--style ${tileConfig.style}`,
               `-Z ${zoomLevel}`,
               `--bounds ${tileConfig.bounds}`,
-              `--monthyear ${tileConfig.monthyear}`,
               `-f ${tileName}`,
             ];
             // Include additional options if they are present in the tileConfig
-            console.log('SECRETS_CONTEXT', SECRETS_CONTEXT)
+            console.log('SECRETS_CONTEXT', SECRETS_CONTEXT, tileConfig.apiKeySecret, SECRETS_CONTEXT[tileConfig.apiKeySecret])
             const apiKey = tileConfig.apiKeySecret ? SECRETS_CONTEXT[tileConfig.apiKeySecret] : SECRETS_CONTEXT.API_KEY;
             if (apiKey) commandParts.push(`--apikey ${apiKey}`);
+            if (tileConfig.monthyear) commandParts.push(`--monthyear ${tileConfig.monthyear}`);
             if (tileConfig.mapbox_style) commandParts.push(`--mapboxstyle ${tileConfig.mapbox_style}`);
             if (tileConfig.minzoom) commandParts.push(`--minzoom ${tileConfig.minzoom}`);
             if (tileConfig.maxzoom) commandParts.push(`--maxzoom ${tileConfig.maxzoom}`);
