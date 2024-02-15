@@ -13,13 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.load-manifest.outputs.matrix }}
-      sshInfo: ${{ steps.load-manifest.outputs.ssh }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: "20.x"
       - run: npm install json5
       - name: Load manifest
         id: load-manifest
@@ -36,7 +35,6 @@ jobs:
               throw new Error('Duplicate tile name detected in manifest.');
             }
             core.setOutput('matrix', JSON.stringify([...nameSet]));
-            core.setOutput('ssh', JSON.stringify(manifest.ssh));
   build-and-deploy:
     needs: prepare
     runs-on: ubuntu-latest
@@ -49,65 +47,100 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: "20.x"
       - run: npm install json5
-      - name: Load tile configuration
-        id: load-tile-config
+      - name: Load manifest
+        id: load-manifest
         uses: actions/github-script@v7
         env:
           TILE_NAME: ${{ matrix.name }}
+          ACTION_TYPE: ${{ github.event_name }}
+          API_KEY: ${{ secrets.API_KEY }}
         with:
           script: |
             const fs = require('fs');
             const JSON5 = require('json5');
             const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
             const manifest = JSON5.parse(manifestContent);
-            console.log('NAME', process.env.TILE_NAME);
+            const { ACTION_TYPE, API_KEY } = process.env;
             const tileName = process.env.TILE_NAME;
+
+            let sshInfo = manifest.ssh;
+            let useSSH = true;
+            if (!sshInfo || !sshInfo.host) {
+              useSSH = false;
+              sshInfo = {}; // Set to an empty object to avoid null references
+            }
+            core.setOutput('useSSH', useSSH);
             const tileConfig = manifest.tiles.find(tile => tile.name === tileName);
             if (!tileConfig) {
               throw new Error(`Tile configuration for '${tileName}' not found.`);
             }
-            console.log("tileConfig", tileConfig);
-            core.setOutput('style', tileConfig.style);
-            core.setOutput('zoom_level', tileConfig.zoom_level);
-            core.setOutput('bounds', tileConfig.bounds);
-            core.setOutput('monthyear', tileConfig.monthyear);
+            const zoomLevel = (ACTION_TYPE == 'push') ? '5' : tileConfig.zoom_level;
+            const commandParts = [
+              `--style ${tileConfig.style}`,
+              `-Z ${zoomLevel}`,
+              `--bounds ${tileConfig.bounds}`,
+              `--monthyear ${tileConfig.monthyear}`,
+              `-f ${tileName}`,
+            ];
+            // Include additional options if they are present in the tileConfig
+            if (API_KEY) commandParts.push(`--apikey ${API_KEY}`);
+            if (tileConfig.minzoom) commandParts.push(`--minzoom ${tileConfig.minzoom}`);
+            if (tileConfig.maxzoom) commandParts.push(`--maxzoom ${tileConfig.maxzoom}`);
+            if (tileConfig.tile_format) commandParts.push(`--format ${tileConfig.tile_format}`);
+            if (tileConfig.scale) commandParts.push(`--scale ${tileConfig.scale}`);
+            if (tileConfig.tile_size) commandParts.push(`--size ${tileConfig.tile_size}`);
+            if (tileConfig.attribution) commandParts.push(`--attribution ${tileConfig.attribution}`);
+            if (tileConfig.logo) commandParts.push(`--logo ${tileConfig.logo}`);
+            if (tileConfig.center) commandParts.push(`--center ${tileConfig.center}`);
+            if (tileConfig.pixel_ratio) commandParts.push(`--pixel_ratio ${tileConfig.pixel_ratio}`);
+            if (tileConfig.language) commandParts.push(`--language ${tileConfig.language}`);
+            const command = commandParts.join(' ');
+            core.setOutput('command', command);
+            if (useSSH) {
+              core.setOutput('sshHost', sshInfo.host);
+              core.setOutput('sshUsername', sshInfo.username);
+              core.setOutput('sshPort', sshInfo.port);
+              const currentDate = new Date();
+              const currentYear = currentDate.getFullYear();
+              const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+              const currentDay = String(currentDate.getDate()).padStart(2, '0');
+              const targetPath = `${sshInfo.target}/${manifest.style}-${currentDay}-${currentMonth}-${currentYear}`;
+              core.setOutput('sshTarget', targetPath);
+            }
+            const fileName = `${tileName}.mbtiles`;
+            core.setOutput('sshFileName', fileName);
       - name: Scrape tiles
         run: |
-          docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main \
-          --style ${{ steps.load-tile-config.outputs.style }} \
-          -Z ${{ steps.load-tile-config.outputs.zoom_level }} \
-          --bounds ${{ steps.load-tile-config.outputs.bounds }} \
-          --monthyear ${{ steps.load-tile-config.outputs.monthyear }} \
-          -f ${{ matrix.name }}
+          docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main ${{ steps.load-manifest.outputs.command }}
       - name: Copy mbtiles to EDT Cloud
-        if: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
+        if: ${{ steps.load-manifest.outputs.useSSH }}
         uses: appleboy/scp-action@v0.1.3
         with:
-          host: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
-          username: ${{ fromJson(needs.prepare.outputs.sshInfo).username }}
-          port: ${{ fromJson(needs.prepare.outputs.sshInfo).port }}
+          host: ${{ steps.load-manifest.outputs.sshHost }}
+          username: ${{ steps.load-manifest.outputs.sshUsername }}
+          port: ${{ steps.load-manifest.outputs.sshPort }}
           key: ${{ secrets.SSH_KEY }}
-          source: "${{ github.workspace }}/outputs/${{ matrix.name }}.mbtiles"
-          target: "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ steps.load-tile-config.outputs.style }}-${{ github.run_id }}"
+          source: "${{ github.workspace }}/outputs/${{ steps.load-manifest.outputs.sshFileName }}"
+          target: "${{ steps.load-manifest.outputs.sshTarget }}"
           strip_components: 3
           timeout: 60s
           command_timeout: 30m
-      - name: Setting correct file permissions
-        if: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
+      - name: Setting correct file persmissions
+        if: ${{ steps.load-manifest.outputs.useSSH }}
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
-          username: ${{ fromJson(needs.prepare.outputs.sshInfo).username }}
+          host: ${{ steps.load-manifest.outputs.sshHost }}
+          username: ${{ steps.load-manifest.outputs.sshUsername }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ fromJson(needs.prepare.outputs.sshInfo).port }}
-          script: chown -R 1000:1000 "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ steps.load-tile-config.outputs.style }}-${{ github.run_id }}"
+          port: ${{ steps.load-manifest.outputs.sshPort }}
+          script: chown -R 1000:1000 ${{ steps.load-manifest.outputs.sshTarget }}
       - name: Upload mbtiles file as artifact
-        if: ${{ !fromJson(needs.prepare.outputs.sshInfo).host }}
+        if: ${{ !steps.load-manifest.outputs.useSSH }}
         uses: actions/upload-artifact@v3
         with:
-          name: mbtiles-${{ github.run_number }}
+          name: ${{ steps.load-manifest.outputs.sshFileName }}
           path: outputs/*.mbtiles
           if-no-files-found: error # 'warn' or 'ignore' are also available, 'error' will fail the step
           retention-days: 90
