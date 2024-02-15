@@ -78,7 +78,7 @@ jobs:
             if (!tileConfig) {
               throw new Error(`Tile configuration for '${TILE_NAME}' not found.`);
             }
-            const zoomLevel = (ACTION_TYPE == 'push') ? '5' : tileConfig.zoom_level;
+            const zoomLevel = (ACTION_TYPE == 'push') ? '5' : tileConfig.maxzoom;
             const commandParts = [
               `--style ${tileConfig.style}`,
               `-Z ${zoomLevel}`,
@@ -91,15 +91,6 @@ jobs:
             if (tileConfig.monthyear) commandParts.push(`--monthyear ${tileConfig.monthyear}`);
             if (tileConfig.mapbox_style) commandParts.push(`--mapboxstyle ${tileConfig.mapbox_style}`);
             if (tileConfig.minzoom) commandParts.push(`--minzoom ${tileConfig.minzoom}`);
-            if (tileConfig.maxzoom) commandParts.push(`--maxzoom ${tileConfig.maxzoom}`);
-            if (tileConfig.tile_format) commandParts.push(`--format ${tileConfig.tile_format}`);
-            if (tileConfig.scale) commandParts.push(`--scale ${tileConfig.scale}`);
-            if (tileConfig.tile_size) commandParts.push(`--size ${tileConfig.tile_size}`);
-            if (tileConfig.attribution) commandParts.push(`--attribution ${tileConfig.attribution}`);
-            if (tileConfig.logo) commandParts.push(`--logo ${tileConfig.logo}`);
-            if (tileConfig.center) commandParts.push(`--center ${tileConfig.center}`);
-            if (tileConfig.pixel_ratio) commandParts.push(`--pixel_ratio ${tileConfig.pixel_ratio}`);
-            if (tileConfig.language) commandParts.push(`--language ${tileConfig.language}`);
             const command = commandParts.join(' ');
             core.setOutput('command', command);
             if (useSSH) {
@@ -118,7 +109,7 @@ jobs:
       - name: Scrape tiles
         run: |
           docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main ${{ steps.load-manifest.outputs.command }}
-      - name: Copy mbtiles to EDT Cloud
+      - name: Copy mbtiles to cloud server
         if: ${{ steps.load-manifest.outputs.useSSH }}
         uses: appleboy/scp-action@v0.1.3
         with:
@@ -131,7 +122,7 @@ jobs:
           strip_components: 3
           timeout: 60s
           command_timeout: 30m
-      - name: Setting correct file persmissions
+      - name: Setting correct file permissions
         if: ${{ steps.load-manifest.outputs.useSSH }}
         uses: appleboy/ssh-action@v1.0.3
         with:
