@@ -5,7 +5,9 @@
             "style": "planet", // Map style to be used for tile generation
             "monthyear": "2023-12", // Month and year for which the tiles are generated, in YYYY-MM format
             "bounds": "160.729980,-9.595334,161.415253,-8.886428", // Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
-            "zoom_level": "16", // Zoom level for which the tiles will be generated
+            "zoom_level": "16" // Zoom level for which the tiles will be generated
+            // "mapbox_style": "", // Mapbox style in the format <yourusername>/<styleid>
+            // "apiKeySecret": "", // Api key secret name, defaults to API_KEY
             // "minzoom": "", // Minimum zoom level for which the tiles will be generated
             // "maxzoom": "", // Maximum zoom level for which the tiles will be generated
             // "tile_format": "", // Format of the tiles to generate (e.g., "png", "jpg")
@@ -17,12 +19,20 @@
             // "center": "", // Center of the map in "longitude,latitude,zoom" format
             // "pixel_ratio": "", // Pixel ratio to consider for retina displays
             // "language": "", // Language to be used for map labels
+        },
+        {
+            "name": "arariboia",
+            "style": "mapbox",
+            "bounds": "-46.775635,-5.350093,-46.032685,-4.793354",
+            "zoom_level": "16",
+            "mapbox_style": "luandro/clryy7mbc018u01p1a68026nl",
+            "apiKeySecret": "MAPBOX_API_KEY"
         }
     ],
     "ssh": {
         "host": "cloud.earthdefenderstoolkit.com", // Hostname or IP address of the SSH server
         "username": "root", // Username for SSH authentication
         "port": 22, // Port number for the SSH server
-        "target": "/mnt/volume_nyc1_01/data/content/partners/malaita/tiles/" // Target directory on the SSH server where the tiles will be stored
+        "target": "/mnt/volume_nyc1_01/data/content/partners/test/tiles/" // Target directory on the SSH server where the tiles will be stored
     }
 }

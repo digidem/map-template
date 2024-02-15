@@ -55,16 +55,15 @@ jobs:
         env:
           TILE_NAME: ${{ matrix.name }}
           ACTION_TYPE: ${{ github.event_name }}
-          API_KEY: ${{ secrets.API_KEY }}
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
         with:
           script: |
             const fs = require('fs');
             const JSON5 = require('json5');
             const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
             const manifest = JSON5.parse(manifestContent);
-            const { ACTION_TYPE, API_KEY } = process.env;
-            const tileName = process.env.TILE_NAME;
-
+            const { ACTION_TYPE, SECRETS_CONTEXT, TILE_NAME } = process.env;
+            const tileName = (ACTION_TYPE === 'push') ? `test-${TILE_NAME}` : TILE_NAME;
             let sshInfo = manifest.ssh;
             let useSSH = true;
             if (!sshInfo || !sshInfo.host) {
@@ -85,7 +84,10 @@ jobs:
               `-f ${tileName}`,
             ];
             // Include additional options if they are present in the tileConfig
-            if (API_KEY) commandParts.push(`--apikey ${API_KEY}`);
+            console.log('SECRETS_CONTEXT', SECRETS_CONTEXT)
+            const apiKey = tileConfig.apiKeySecret ? SECRETS_CONTEXT[tileConfig.apiKeySecret] : SECRETS_CONTEXT.API_KEY;
+            if (apiKey) commandParts.push(`--apikey ${apiKey}`);
+            if (tileConfig.mapbox_style) commandParts.push(`--mapboxstyle ${tileConfig.mapbox_style}`);
             if (tileConfig.minzoom) commandParts.push(`--minzoom ${tileConfig.minzoom}`);
             if (tileConfig.maxzoom) commandParts.push(`--maxzoom ${tileConfig.maxzoom}`);
             if (tileConfig.tile_format) commandParts.push(`--format ${tileConfig.tile_format}`);
