@@ -106,7 +106,7 @@ jobs:
               const currentYear = currentDate.getFullYear();
               const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
               const currentDay = String(currentDate.getDate()).padStart(2, '0');
-              const targetPath = `${sshInfo.target}/${manifest.style}-${currentDay}-${currentMonth}-${currentYear}`;
+              const targetPath = `${sshInfo.target}/${tileConfig.style}-${currentDay}-${currentMonth}-${currentYear}`;
               core.setOutput('sshTarget', targetPath);
             }
             const fileName = `${tileName}.mbtiles`;
