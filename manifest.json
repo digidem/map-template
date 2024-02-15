@@ -1,10 +1,10 @@
 {
     "tiles": [
         {
-            "name": "malaita", // Base name for the generated .mbtiles file
+            "name": "planet", // Base name for the generated .mbtiles file
             "style": "planet", // Map style to be used for tile generation
             "monthyear": "2023-12", // Month and year for which the tiles are generated, in YYYY-MM format
-            "bounds": "160.729980,-9.595334,161.415253,-8.886428", // Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
+            "bounds": "-54.28772,3.11460,-54.03630,3.35025", // Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
             "zoom_level": "16" // Zoom level for which the tiles will be generated
             // "mapbox_style": "", // Mapbox style in the format <yourusername>/<styleid>
             // "apiKeySecret": "", // Api key secret name, defaults to API_KEY
@@ -21,12 +21,62 @@
             // "language": "", // Language to be used for map labels
         },
         {
-            "name": "arariboia",
+            "name": "mapbox",
             "style": "mapbox",
-            "bounds": "-46.775635,-5.350093,-46.032685,-4.793354",
+            "bounds": "-54.28772,3.11460,-54.03630,3.35025",
             "zoom_level": "16",
             "mapbox_style": "luandro/clryy7mbc018u01p1a68026nl",
             "apiKeySecret": "MAPBOX_API_KEY"
+        },
+        {
+            "name": "bing",
+            "style": "bing",
+            "bounds": "-54.28772,3.11460,-54.03630,3.35025",
+            "zoom_level": "10"
+        },
+        {
+            "name": "esri",
+            "style": "esri",
+            "bounds": "-54.28772,3.11460,-54.03630,3.35025",
+            "zoom_level": "10",
+            "overlay": {
+                "type": "FeatureCollection",
+                "name": "alert",
+                "features": [
+                    {
+                        "geometry": {
+                            "coordinates": [
+                                [
+                                    [
+                                        -54.25348208981326,
+                                        3.140689896338671
+                                    ],
+                                    [
+                                        -54.25348208981326,
+                                        3.140600064810259
+                                    ],
+                                    [
+                                        -54.253841415926914,
+                                        3.140600064810259
+                                    ],
+                                    [
+                                        -54.25348208981326,
+                                        3.140689896338671
+                                    ]
+                                ]
+                            ],
+                            "geodesic": false,
+                            "type": "Polygon"
+                        },
+                        "id": "-603946+34961",
+                        "properties": {
+                            "month_detec": "09",
+                            "year_detec": "2023"
+                        },
+                        "type": "Feature"
+                    }
+                ]
+            }
         }
     ],
     "ssh": {

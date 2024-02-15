@@ -85,7 +85,6 @@ jobs:
               `-f ${tileName}`,
             ];
             // Include additional options if they are present in the tileConfig
-            console.log('process.env', process.env, tileConfig.apiKeySecret);
             const apiKey = tileConfig.apiKeySecret ? process.env[tileConfig.apiKeySecret] : process.env.API_KEY;
             if (apiKey) commandParts.push(`--apikey ${apiKey}`);
             if (tileConfig.monthyear) commandParts.push(`--monthyear ${tileConfig.monthyear}`);
