@@ -35,6 +35,8 @@ jobs:
             if (nameSet.size !== tileNames.length) {
               throw new Error('Duplicate tile name detected in manifest.');
             }
+            console.log('SET', nameSet)
+            console.log([...nameSet]);
             core.setOutput('matrix', JSON.stringify([...nameSet]));
             core.setOutput('ssh', JSON.stringify(manifest.ssh));
   build-and-deploy:
