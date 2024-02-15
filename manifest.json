@@ -83,6 +83,6 @@
         "host": "cloud.earthdefenderstoolkit.com", // Hostname or IP address of the SSH server
         "username": "root", // Username for SSH authentication
         "port": 22, // Port number for the SSH server
-        "target": "/mnt/volume_nyc1_01/data/content/partners/test/tiles/" // Target directory on the SSH server where the tiles will be stored
+        "target": "/mnt/volume_nyc1_01/data/content/partners/test/tiles" // Target directory on the SSH server where the tiles will be stored
     }
 }
