@@ -30,12 +30,13 @@ jobs:
             const JSON5 = require('json5');
             const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
             const manifest = JSON5.parse(manifestContent);
-            console.log('manifest', manifest);
             core.setOutput('tiles', manifest.tiles);
             core.setOutput('ssh', manifest.ssh);
       - name: Set matrix for tile jobs
         id: set-matrix
-        run: echo "matrix=${{ toJSON(steps.load-manifest.outputs.tiles) }}" >> $GITHUB_OUTPUT
+        run: |
+          echo "::set-output name=matrix::${{ toJSON(steps.load-manifest.outputs.tiles) }}"
+          echo "Loaded tiles for debugging: ${{ toJSON(steps.load-manifest.outputs.tiles) }}"
       - name: Load SSH info
         id: load-ssh
         run: echo "sshInfo=${{ toJSON(steps.load-manifest.outputs.ssh) }}" >> $GITHUB_OUTPUT
