@@ -53,15 +53,19 @@ jobs:
       - run: npm install json5
       - name: Load tile configuration
         id: load-tile-config
+        env:
+          TILE_NAME: ${{ matrix.name }}
         run: |
           const fs = require('fs');
           const JSON5 = require('json5');
           const core = require('@actions/core');
           const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
           const manifest = JSON5.parse(manifestContent);
-          const tileConfig = manifest.tiles.find(tile => tile.name === '${{ matrix.name }}');
+          console.log('NAME', process.env.TILE_NAME);
+          const tileName = process.env.TILE_NAME;
+          const tileConfig = manifest.tiles.find(tile => tile.name === tileName);
           if (!tileConfig) {
-            throw new Error(`Tile configuration for '${{ matrix.name }}' not found.`);
+            throw new Error(`Tile configuration for '${tileName}' not found.`);
           }
           console.log("tileConfig", tileConfig);
           core.setOutput('style', tileConfig.style);
