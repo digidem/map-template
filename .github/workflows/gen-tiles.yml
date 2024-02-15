@@ -12,8 +12,8 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-      sshInfo: ${{ steps.load-ssh.outputs.sshInfo }}
+      matrix: ${{ steps.load-manifest.outputs.matrix }}
+      sshInfo: ${{ steps.load-manifest.outputs.ssh }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,16 +30,13 @@ jobs:
             const JSON5 = require('json5');
             const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
             const manifest = JSON5.parse(manifestContent);
-            core.setOutput('tiles', manifest.tiles);
-            core.setOutput('ssh', manifest.ssh);
-      - name: Set matrix for tile jobs
-        id: set-matrix
-        run: |
-          echo "::set-output name=matrix::${{ toJSON(steps.load-manifest.outputs.tiles) }}"
-          echo "Loaded tiles for debugging: ${{ toJSON(steps.load-manifest.outputs.tiles) }}"
-      - name: Load SSH info
-        id: load-ssh
-        run: echo "sshInfo=${{ toJSON(steps.load-manifest.outputs.ssh) }}" >> $GITHUB_OUTPUT
+            const tileNames = manifest.tiles.map(tile => tile.name);
+            const nameSet = new Set(tileNames);
+            if (nameSet.size !== tileNames.length) {
+              throw new Error('Duplicate tile name detected in manifest.');
+            }
+            core.setOutput('matrix', JSON.stringify([...nameSet]));
+            core.setOutput('ssh', JSON.stringify(manifest.ssh));
   build-and-deploy:
     needs: prepare
     runs-on: ubuntu-latest
@@ -48,14 +45,36 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - run: npm install json5
+      - name: Load tile configuration
+        id: load-tile-config
+        run: |
+          const fs = require('fs');
+          const JSON5 = require('json5');
+          const core = require('@actions/core');
+          const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
+          const manifest = JSON5.parse(manifestContent);
+          const tileConfig = manifest.tiles.find(tile => tile.name === '${{ matrix }}');
+          if (!tileConfig) {
+            throw new Error(`Tile configuration for '${{ matrix }}' not found.`);
+          }
+          core.setOutput('style', tileConfig.style);
+          core.setOutput('zoom_level', tileConfig.zoom_level);
+          core.setOutput('bounds', JSON.stringify(tileConfig.bounds));
+          core.setOutput('monthyear', tileConfig.monthyear);
+        shell: bash
       - name: Scrape tiles
         run: |
           docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main \
-          --style ${{ matrix.style }} \
-          -Z ${{ matrix.zoom_level }} \
-          --bounds ${{ matrix.bounds }} \
-          --monthyear ${{ matrix.monthyear }} \
-          -f ${{ matrix.name }}
+          --style ${{ steps.load-tile-config.outputs.style }} \
+          -Z ${{ steps.load-tile-config.outputs.zoom_level }} \
+          --bounds ${{ steps.load-tile-config.outputs.bounds }} \
+          --monthyear ${{ steps.load-tile-config.outputs.monthyear }} \
+          -f ${{ matrix }}
       - name: Copy mbtiles to EDT Cloud
         if: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
         uses: appleboy/scp-action@v0.1.3
@@ -64,8 +83,8 @@ jobs:
           username: ${{ fromJson(needs.prepare.outputs.sshInfo).username }}
           port: ${{ fromJson(needs.prepare.outputs.sshInfo).port }}
           key: ${{ secrets.SSH_KEY }}
-          source: "${{ github.workspace }}/outputs/${{ matrix.name }}.mbtiles"
-          target: "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ matrix.style }}-${{ github.run_id }}"
+          source: "${{ github.workspace }}/outputs/${{ matrix }}.mbtiles"
+          target: "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ steps.load-tile-config.outputs.style }}-${{ github.run_id }}"
           strip_components: 3
           timeout: 60s
           command_timeout: 30m
@@ -77,12 +96,12 @@ jobs:
           username: ${{ fromJson(needs.prepare.outputs.sshInfo).username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ fromJson(needs.prepare.outputs.sshInfo).port }}
-          script: chown -R 1000:1000 "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ matrix.style }}-${{ github.run_id }}"
+          script: chown -R 1000:1000 "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ steps.load-tile-config.outputs.style }}-${{ github.run_id }}"
       - name: Upload mbtiles file as artifact
         if: ${{ !fromJson(needs.prepare.outputs.sshInfo).host }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.name }}.mbtiles
+          name: mbtiles-${{ github.run_number }}
           path: outputs/*.mbtiles
           if-no-files-found: error # 'warn' or 'ignore' are also available, 'error' will fail the step
           retention-days: 90
