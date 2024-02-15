@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: '20.x'
       - run: npm install json5
@@ -30,15 +30,15 @@ jobs:
             const JSON5 = require('json5');
             const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
             const manifest = JSON5.parse(manifestContent);
-            return manifest.tiles;
+            console.log('manifest', manifest);
+            core.setOutput('tiles', manifest.tiles);
+            core.setOutput('ssh', manifest.ssh);
       - name: Set matrix for tile jobs
         id: set-matrix
-        run: echo "::set-output name=matrix::${{ toJSON(steps.load-manifest.outputs.result) }}"
+        run: echo "matrix=${{ toJSON(steps.load-manifest.outputs.tiles) }}" >> $GITHUB_OUTPUT
       - name: Load SSH info
         id: load-ssh
-        run: |
-          echo "::set-output name=sshInfo::$(jq -c '.ssh' manifest.json)"
-
+        run: echo "sshInfo=${{ toJSON(steps.load-manifest.outputs.ssh) }}" >> $GITHUB_OUTPUT
   build-and-deploy:
     needs: prepare
     runs-on: ubuntu-latest
