@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 1 */2 *"
+
 jobs:
-  build-tiles:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      sshInfo: ${{ steps.load-ssh.outputs.sshInfo }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,91 +21,67 @@ jobs:
         with:
           node-version: '20.x'
       - run: npm install json5
-      - name: Load manifest and SSH info
+      - name: Load manifest
         id: load-manifest
         uses: actions/github-script@v7
-        env:
-          ACTION_TYPE: ${{ github.event_name }}
-          API_KEY: ${{ secrets.API_KEY }}
         with:
           script: |
             const fs = require('fs');
             const JSON5 = require('json5');
-            const { ACTION_TYPE, API_KEY } = process.env;
             const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
             const manifest = JSON5.parse(manifestContent);
-            const fileName = `${manifest.name}.mbtiles`;
-            let sshInfo = manifest.ssh;
-            let useSSH = true;
-            if (!sshInfo || !sshInfo.host) {
-              useSSH = false;
-              sshInfo = {}; // Set to an empty object to avoid null references
-            }
-            const zoomLevel = (ACTION_TYPE == 'push') ? '5' : manifest.zoom_level;
-            const commandParts = [
-              `--style ${manifest.style}`,
-              `-Z ${zoomLevel}`,
-              `--bounds ${manifest.bounds}`,
-              `--monthyear ${manifest.monthyear}`,
-              `-f ${manifest.name}`,
-            ];
-            if (API_KEY) commandParts.push(`--apikey ${API_KEY}`);
-            // Include additional options if they are present in the manifest
-            if (manifest.minzoom) commandParts.push(`--minzoom ${manifest.minzoom}`);
-            if (manifest.maxzoom) commandParts.push(`--maxzoom ${manifest.maxzoom}`);
-            if (manifest.tile_format) commandParts.push(`--format ${manifest.tile_format}`);
-            if (manifest.scale) commandParts.push(`--scale ${manifest.scale}`);
-            if (manifest.tile_size) commandParts.push(`--size ${manifest.tile_size}`);
-            if (manifest.attribution) commandParts.push(`--attribution ${manifest.attribution}`);
-            if (manifest.logo) commandParts.push(`--logo ${manifest.logo}`);
-            if (manifest.center) commandParts.push(`--center ${manifest.center}`);
-            if (manifest.pixel_ratio) commandParts.push(`--pixel_ratio ${manifest.pixel_ratio}`);
-            if (manifest.language) commandParts.push(`--language ${manifest.language}`);
-            const command = commandParts.join(' ');
-            core.setOutput('command', command);
-            core.setOutput('useSSH', useSSH);
-            if (useSSH) {
-              core.setOutput('sshHost', sshInfo.host);
-              core.setOutput('sshUsername', sshInfo.username);
-              core.setOutput('sshPort', sshInfo.port);
-              const currentDate = new Date();
-              const currentYear = currentDate.getFullYear();
-              const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
-              const currentDay = String(currentDate.getDate()).padStart(2, '0');
-              const targetPath = `${sshInfo.target}/${manifest.style}-${currentDay}-${currentMonth}-${currentYear}`;
-              core.setOutput('sshTarget', targetPath);
-            }
-            core.setOutput('sshFileName', fileName);
+            return manifest.tiles;
+      - name: Set matrix for tile jobs
+        id: set-matrix
+        run: echo "::set-output name=matrix::${{ toJSON(steps.load-manifest.outputs.result) }}"
+      - name: Load SSH info
+        id: load-ssh
+        run: |
+          echo "::set-output name=sshInfo::$(jq -c '.ssh' manifest.json)"
+
+  build-and-deploy:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Scrape tiles
         run: |
-          docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main ${{ steps.load-manifest.outputs.command }}
+          docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main \
+          --style ${{ matrix.style }} \
+          -Z ${{ matrix.zoom_level }} \
+          --bounds ${{ matrix.bounds }} \
+          --monthyear ${{ matrix.monthyear }} \
+          -f ${{ matrix.name }}
       - name: Copy mbtiles to EDT Cloud
-        if: ${{ steps.load-manifest.outputs.useSSH }}
+        if: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
         uses: appleboy/scp-action@v0.1.3
         with:
-          host: ${{ steps.load-manifest.outputs.sshHost }}
-          username: ${{ steps.load-manifest.outputs.sshUsername }}
-          port: ${{ steps.load-manifest.outputs.sshPort }}
+          host: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
+          username: ${{ fromJson(needs.prepare.outputs.sshInfo).username }}
+          port: ${{ fromJson(needs.prepare.outputs.sshInfo).port }}
           key: ${{ secrets.SSH_KEY }}
-          source: "${{ github.workspace }}/outputs/${{ steps.load-manifest.outputs.sshFileName }}"
-          target: "${{ steps.load-manifest.outputs.sshTarget }}"
+          source: "${{ github.workspace }}/outputs/${{ matrix.name }}.mbtiles"
+          target: "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ matrix.style }}-${{ github.run_id }}"
           strip_components: 3
           timeout: 60s
           command_timeout: 30m
-      - name: Setting correct file persmissions
-        if: ${{ steps.load-manifest.outputs.useSSH }}
+      - name: Setting correct file permissions
+        if: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.load-manifest.outputs.sshHost }}
-          username: ${{ steps.load-manifest.outputs.sshUsername }}
+          host: ${{ fromJson(needs.prepare.outputs.sshInfo).host }}
+          username: ${{ fromJson(needs.prepare.outputs.sshInfo).username }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ steps.load-manifest.outputs.sshPort }}
-          script: chown -R 1000:1000 ${{ steps.load-manifest.outputs.sshTarget }}
+          port: ${{ fromJson(needs.prepare.outputs.sshInfo).port }}
+          script: chown -R 1000:1000 "${{ fromJson(needs.prepare.outputs.sshInfo).target }}/${{ matrix.style }}-${{ github.run_id }}"
       - name: Upload mbtiles file as artifact
-        if: ${{ !steps.load-manifest.outputs.useSSH }}
+        if: ${{ !fromJson(needs.prepare.outputs.sshInfo).host }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.load-manifest.outputs.sshFileName }}
+          name: ${{ matrix.name }}.mbtiles
           path: outputs/*.mbtiles
           if-no-files-found: error # 'warn' or 'ignore' are also available, 'error' will fail the step
           retention-days: 90
