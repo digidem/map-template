@@ -27,14 +27,17 @@ on:
       apiKeySecret:
         description: 'Api key secret name, defaults to API_KEY'
         required: false
-      minzoom:
-        description: 'Minimum zoom level for which the tiles will be generated'
+      useSSH:
+          description: 'If true, will will copy file to remote machine, else will upload as artifact.'
+          default: 'true'
+          required: false
+      sshHost:
+        description: 'Host of the remote mechine'
+        default: 'cloud.earthdefenderstoolkit.com'
         required: false
-      maxzoom:
-        description: 'Maximum zoom level for which the tiles will be generated'
-        required: false
-      tile_format:
-        description: 'Format of the tiles to generate (e.g., "png", "jpg")'
+      sshTarget:
+        description: "Remote machine's folder where to copy file"
+        default: '/mnt/volume_nyc1_01/data/content/partners/test/tiles'
         required: false
 jobs:
   build-and-deploy:
@@ -42,11 +45,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.x"
-      - run: npm install json5
       - name: Generate Tile Command
         id: generate-tile-command
         run: |
@@ -57,17 +55,6 @@ jobs:
           MONTHYEAR="${{ github.event.inputs.monthyear }}"
           MAPBOX_STYLE="${{ github.event.inputs.mapbox_style }}"
           API_KEY_SECRET="${{ github.event.inputs.apiKeySecret }}"
-          MINZOOM="${{ github.event.inputs.minzoom }}"
-          MAXZOOM="${{ github.event.inputs.maxzoom }}"
-          TILE_FORMAT="${{ github.event.inputs.tile_format }}"
-          SCALE="${{ github.event.inputs.scale }}"
-          TILE_SIZE="${{ github.event.inputs.tile_size }}"
-          ATTRIBUTION="${{ github.event.inputs.attribution }}"
-          LOGO="${{ github.event.inputs.logo }}"
-          CENTER="${{ github.event.inputs.center }}"
-          PIXEL_RATIO="${{ github.event.inputs.pixel_ratio }}"
-          LANGUAGE="${{ github.event.inputs.language }}"
-
           COMMAND="--style $STYLE -Z $ZOOM_LEVEL --bounds $BOUNDS -f $TILE_NAME"
           if [ -n "$API_KEY_SECRET" ]; then
             API_KEY=${!API_KEY_SECRET}
@@ -90,6 +77,28 @@ jobs:
       - name: Scrape tiles
         run: |
           docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main ${{ env.COMMAND }}
+      - name: Copy mbtiles to EDT Cloud
+        if: ${{ github.event.inputs.useSSH && github.event.inputs.useSSH != 'false' }}
+        uses: appleboy/scp-action@v0.1.3
+        with:
+          host: ${{ github.event.inputs.sshHost }}
+          username: "root"
+          port: 22
+          key: ${{ secrets.SSH_KEY }}
+          source: "outputs/${{ github.event.inputs.name }}.mbtiles"
+          target: ${{ github.event.inputs.sshTarget }}
+          strip_components: 3
+          timeout: 60s
+          command_timeout: 30m
+      - name: Setting correct file permissions
+        if: ${{ github.event.inputs.useSSH && github.event.inputs.useSSH != 'false' }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ github.event.inputs.sshHost }}
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: chown -R 1000:1000 ${{ github.event.inputs.sshTarget }}
       - name: Upload mbtiles file as artifact
         uses: actions/upload-artifact@v3
         with:
