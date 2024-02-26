@@ -52,27 +52,13 @@ jobs:
           STYLE="${{ github.event.inputs.style }}"
           BOUNDS="${{ github.event.inputs.bounds }}"
           ZOOM_LEVEL="${{ github.event.inputs.zoom_level }}"
-          MONTHYEAR="${{ github.event.inputs.monthyear }}"
-          MAPBOX_STYLE="${{ github.event.inputs.mapbox_style }}"
-          API_KEY_SECRET="${{ github.event.inputs.apiKeySecret }}"
           COMMAND="--style $STYLE -Z $ZOOM_LEVEL --bounds $BOUNDS -f $TILE_NAME"
-          if [ -n "$API_KEY_SECRET" ]; then
+          if [ -n "${{ github.event.inputs.apiKeySecret }}" ]; then
             API_KEY=${!API_KEY_SECRET}
             COMMAND+=" --apikey $API_KEY"
           fi
-          if [ -n "$MONTHYEAR" ]; then COMMAND+=" --monthyear $MONTHYEAR"; fi
-          if [ -n "$MAPBOX_STYLE" ]; then COMMAND+=" --mapboxstyle $MAPBOX_STYLE"; fi
-          if [ -n "$MINZOOM" ]; then COMMAND+=" --minzoom $MINZOOM"; fi
-          if [ -n "$MAXZOOM" ]; then COMMAND+=" --maxzoom $MAXZOOM"; fi
-          if [ -n "$TILE_FORMAT" ]; then COMMAND+=" --format $TILE_FORMAT"; fi
-          if [ -n "$SCALE" ]; then COMMAND+=" --scale $SCALE"; fi
-          if [ -n "$TILE_SIZE" ]; then COMMAND+=" --size $TILE_SIZE"; fi
-          if [ -n "$ATTRIBUTION" ]; then COMMAND+=" --attribution $ATTRIBUTION"; fi
-          if [ -n "$LOGO" ]; then COMMAND+=" --logo $LOGO"; fi
-          if [ -n "$CENTER" ]; then COMMAND+=" --center $CENTER"; fi
-          if [ -n "$PIXEL_RATIO" ]; then COMMAND+=" --pixel_ratio $PIXEL_RATIO"; fi
-          if [ -n "$LANGUAGE" ]; then COMMAND+=" --language $LANGUAGE"; fi
-
+          if [ -n "${{ github.event.inputs.monthyear }}" ]; then COMMAND+=" --monthyear $MONTHYEAR"; fi
+          if [ -n "${{ github.event.inputs.mapbox_style }}" ]; then COMMAND+=" --mapboxstyle $MAPBOX_STYLE"; fi
           echo "COMMAND=$COMMAND" >> $GITHUB_ENV
       - name: Scrape tiles
         run: |
