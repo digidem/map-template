@@ -1,46 +1,64 @@
 name: Generate Tiles
 
 on:
-  push:
-    branches:
-      - "main"
   workflow_dispatch:
-  schedule:
-    - cron: "0 0 1 */2 *"
+    inputs:
+      name:
+        description: 'Tile name'
+        required: true
+      style:
+        description: 'Map style to be used for tile generation (self, mapbox, bing, planet, or esri)'
+        default: 'bing'
+        required: true
+      bounds:
+        description: 'Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format'
+        required: true
+      zoom_level:
+        description: 'Zoom level for which the tiles will be generated'
+        required: true
+      monthyear:
+        description: 'Month and year for which the tiles are generated, in YYYY-MM format'
+        required: false
+      mapbox_style:
+        description: 'Mapbox style in the format <yourusername>/<styleid>'
+        required: false
+      apiKeySecret:
+        description: 'Api key secret name, defaults to API_KEY'
+        required: false
+      minzoom:
+        description: 'Minimum zoom level for which the tiles will be generated'
+        required: false
+      maxzoom:
+        description: 'Maximum zoom level for which the tiles will be generated'
+        required: false
+      tile_format:
+        description: 'Format of the tiles to generate (e.g., "png", "jpg")'
+        required: false
+      scale:
+        description: 'Scale factor for the tiles (e.g., "1", "2" for @2x tiles)'
+        required: false
+      tile_size:
+        description: 'Size of the tiles in pixels (e.g., "256", "512")'
+        required: false
+      attribution:
+        description: 'Attribution to be included in the tiles metadata'
+        required: false
+      logo:
+        description: 'URL to a logo image to be included in the tiles metadata'
+        required: false
+      center:
+        description: 'Center of the map in "longitude,latitude,zoom" format'
+        required: false
+      pixel_ratio:
+        description: 'Pixel ratio to consider for retina displays'
+        required: false
+      language:
+        description: 'Language to be used for map labels'
+        required: false
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.load-manifest.outputs.matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20.x"
-      - run: npm install json5
-      - name: Load manifest
-        id: load-manifest
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const JSON5 = require('json5');
-            const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
-            const manifest = JSON5.parse(manifestContent);
-            const tileNames = manifest.tiles.map(tile => tile.name);
-            const nameSet = new Set(tileNames);
-            if (nameSet.size !== tileNames.length) {
-              throw new Error('Duplicate tile name detected in manifest.');
-            }
-            core.setOutput('matrix', JSON.stringify([...nameSet]));
   build-and-deploy:
-    needs: prepare
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        name: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,102 +67,53 @@ jobs:
         with:
           node-version: "20.x"
       - run: npm install json5
-      - uses: oNaiPs/secrets-to-env-action@v1
-        with:
-          secrets: ${{ toJSON(secrets) }}
-      - name: Load manifest
-        id: load-manifest
-        uses: actions/github-script@v7
-        env:
-          TILE_NAME: ${{ matrix.name }}
-          ACTION_TYPE: ${{ github.event_name }}
-        with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-            const JSON5 = require('json5');
-            const manifestContent = fs.readFileSync('./manifest.json', 'utf8');
-            const manifest = JSON5.parse(manifestContent);
-            const { ACTION_TYPE, TILE_NAME } = process.env;
-            const tileName = (ACTION_TYPE === 'push') ? `test-${TILE_NAME}` : TILE_NAME;
-            let sshInfo = manifest.ssh;
-            let useSSH = true;
-            if (!sshInfo || !sshInfo.host) {
-              useSSH = false;
-              sshInfo = {}; // Set to an empty object to avoid null references
-            }
-            core.setOutput('useSSH', useSSH);
-            const tileConfig = manifest.tiles.find(tile => tile.name === TILE_NAME);
-            if (!tileConfig) {
-              throw new Error(`Tile configuration for '${TILE_NAME}' not found.`);
-            }
-            const zoomLevel = (ACTION_TYPE == 'push') ? '5' : tileConfig.zoom_level;
-            const commandParts = [
-              `--style ${tileConfig.style}`,
-              `-Z ${zoomLevel}`,
-              `--bounds ${tileConfig.bounds}`,
-              `-f ${tileName}`,
-            ];
-            // Include additional options if they are present in the tileConfig
-            const apiKey = tileConfig.apiKeySecret ? process.env[tileConfig.apiKeySecret] : process.env.API_KEY;
-            if (apiKey) commandParts.push(`--apikey ${apiKey}`);
-            if (tileConfig.monthyear) commandParts.push(`--monthyear ${tileConfig.monthyear}`);
-            if (tileConfig.mapbox_style) commandParts.push(`--mapboxstyle ${tileConfig.mapbox_style}`);
-            if (tileConfig.minzoom) commandParts.push(`--minzoom ${tileConfig.minzoom}`);
-            if (tileConfig.maxzoom) commandParts.push(`--maxzoom ${tileConfig.maxzoom}`);
-            if (tileConfig.tile_format) commandParts.push(`--format ${tileConfig.tile_format}`);
-            if (tileConfig.scale) commandParts.push(`--scale ${tileConfig.scale}`);
-            if (tileConfig.tile_size) commandParts.push(`--size ${tileConfig.tile_size}`);
-            if (tileConfig.attribution) commandParts.push(`--attribution ${tileConfig.attribution}`);
-            if (tileConfig.logo) commandParts.push(`--logo ${tileConfig.logo}`);
-            if (tileConfig.center) commandParts.push(`--center ${tileConfig.center}`);
-            if (tileConfig.pixel_ratio) commandParts.push(`--pixel_ratio ${tileConfig.pixel_ratio}`);
-            if (tileConfig.language) commandParts.push(`--language ${tileConfig.language}`);
-            const command = commandParts.join(' ');
-            core.setOutput('command', command);
-            if (useSSH) {
-              core.setOutput('sshHost', sshInfo.host);
-              core.setOutput('sshUsername', sshInfo.username);
-              core.setOutput('sshPort', sshInfo.port);
-              const currentDate = new Date();
-              const currentYear = currentDate.getFullYear();
-              const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
-              const currentDay = String(currentDate.getDate()).padStart(2, '0');
-              const targetPath = path.join(sshInfo.target, `${tileConfig.style}-${currentDay}-${currentMonth}-${currentYear}`);
-              core.setOutput('sshTarget', targetPath);
-            }
-            const fileName = `${tileName}.mbtiles`;
-            core.setOutput('sshFileName', fileName);
+      - name: Generate Tile Command
+        id: generate-tile-command
+        run: |
+          TILE_NAME="${{ github.event.inputs.name }}"
+          STYLE="${{ github.event.inputs.style }}"
+          BOUNDS="${{ github.event.inputs.bounds }}"
+          ZOOM_LEVEL="${{ github.event.inputs.zoom_level }}"
+          MONTHYEAR="${{ github.event.inputs.monthyear }}"
+          MAPBOX_STYLE="${{ github.event.inputs.mapbox_style }}"
+          API_KEY_SECRET="${{ github.event.inputs.apiKeySecret }}"
+          MINZOOM="${{ github.event.inputs.minzoom }}"
+          MAXZOOM="${{ github.event.inputs.maxzoom }}"
+          TILE_FORMAT="${{ github.event.inputs.tile_format }}"
+          SCALE="${{ github.event.inputs.scale }}"
+          TILE_SIZE="${{ github.event.inputs.tile_size }}"
+          ATTRIBUTION="${{ github.event.inputs.attribution }}"
+          LOGO="${{ github.event.inputs.logo }}"
+          CENTER="${{ github.event.inputs.center }}"
+          PIXEL_RATIO="${{ github.event.inputs.pixel_ratio }}"
+          LANGUAGE="${{ github.event.inputs.language }}"
+
+          COMMAND="--style $STYLE -Z $ZOOM_LEVEL --bounds $BOUNDS -f $TILE_NAME"
+          if [ -n "$API_KEY_SECRET" ]; then
+            API_KEY=${!API_KEY_SECRET}
+            COMMAND+=" --apikey $API_KEY"
+          fi
+          if [ -n "$MONTHYEAR" ]; then COMMAND+=" --monthyear $MONTHYEAR"; fi
+          if [ -n "$MAPBOX_STYLE" ]; then COMMAND+=" --mapboxstyle $MAPBOX_STYLE"; fi
+          if [ -n "$MINZOOM" ]; then COMMAND+=" --minzoom $MINZOOM"; fi
+          if [ -n "$MAXZOOM" ]; then COMMAND+=" --maxzoom $MAXZOOM"; fi
+          if [ -n "$TILE_FORMAT" ]; then COMMAND+=" --format $TILE_FORMAT"; fi
+          if [ -n "$SCALE" ]; then COMMAND+=" --scale $SCALE"; fi
+          if [ -n "$TILE_SIZE" ]; then COMMAND+=" --size $TILE_SIZE"; fi
+          if [ -n "$ATTRIBUTION" ]; then COMMAND+=" --attribution $ATTRIBUTION"; fi
+          if [ -n "$LOGO" ]; then COMMAND+=" --logo $LOGO"; fi
+          if [ -n "$CENTER" ]; then COMMAND+=" --center $CENTER"; fi
+          if [ -n "$PIXEL_RATIO" ]; then COMMAND+=" --pixel_ratio $PIXEL_RATIO"; fi
+          if [ -n "$LANGUAGE" ]; then COMMAND+=" --language $LANGUAGE"; fi
+
+          echo "COMMAND=$COMMAND" >> $GITHUB_ENV
       - name: Scrape tiles
         run: |
-          docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main ${{ steps.load-manifest.outputs.command }}
-      - name: Copy mbtiles to EDT Cloud
-        if: ${{ steps.load-manifest.outputs.useSSH }}
-        uses: appleboy/scp-action@v0.1.3
-        with:
-          host: ${{ steps.load-manifest.outputs.sshHost }}
-          username: ${{ steps.load-manifest.outputs.sshUsername }}
-          port: ${{ steps.load-manifest.outputs.sshPort }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "${{ github.workspace }}/outputs/${{ steps.load-manifest.outputs.sshFileName }}"
-          target: "${{ steps.load-manifest.outputs.sshTarget }}"
-          strip_components: 3
-          timeout: 60s
-          command_timeout: 30m
-      - name: Setting correct file persmissions
-        if: ${{ steps.load-manifest.outputs.useSSH }}
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ steps.load-manifest.outputs.sshHost }}
-          username: ${{ steps.load-manifest.outputs.sshUsername }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ steps.load-manifest.outputs.sshPort }}
-          script: chown -R 1000:1000 ${{ steps.load-manifest.outputs.sshTarget }}
+          docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main ${{ env.COMMAND }}
       - name: Upload mbtiles file as artifact
-        if: ${{ !steps.load-manifest.outputs.useSSH }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.load-manifest.outputs.sshFileName }}
+          name: ${{ github.event.inputs.name }}.mbtiles
           path: outputs/*.mbtiles
           if-no-files-found: error # 'warn' or 'ignore' are also available, 'error' will fail the step
           retention-days: 90
