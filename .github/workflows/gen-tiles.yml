@@ -5,6 +5,7 @@ on:
     inputs:
       name:
         description: 'Tile name'
+        default: 'partner'
         required: true
       style:
         description: 'Map style to be used for tile generation (self, mapbox, bing, planet, or esri)'
