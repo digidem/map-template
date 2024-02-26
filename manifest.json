@@ -4,64 +4,58 @@
             "name": "planet", // Base name for the generated .mbtiles file
             "style": "planet", // Map style to be used for tile generation
             "monthyear": "2023-12", // Month and year for which the tiles are generated, in YYYY-MM format
-            "bounds": "-54.28772,3.11460,-54.03630,3.35025", // Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
-            "zoom_level": "16" // Zoom level for which the tiles will be generated
+            "bounds": "-60,0,-59,1", // Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
+            "maxzoom": "16", // Maximum zoom level for which the tiles will be generated
+            // "minzoom": "", // Minimum zoom level for which the tiles will be generated
             // "mapbox_style": "", // Mapbox style in the format <yourusername>/<styleid>
             // "apiKeySecret": "", // Api key secret name, defaults to API_KEY
-            // "minzoom": "", // Minimum zoom level for which the tiles will be generated
-            // "maxzoom": "", // Maximum zoom level for which the tiles will be generated
-            // "tile_format": "", // Format of the tiles to generate (e.g., "png", "jpg")
-            // "scale": "", // Scale factor for the tiles (e.g., "1", "2" for @2x tiles)
-            // "tile_size": "", // Size of the tiles in pixels (e.g., "256", "512")
-            // "attribution": "", // Attribution to be included in the tiles metadata
-            // "logo": "", // URL to a logo image to be included in the tiles metadata
-            // "bounds": "", // Overriding the bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format
-            // "center": "", // Center of the map in "longitude,latitude,zoom" format
-            // "pixel_ratio": "", // Pixel ratio to consider for retina displays
-            // "language": "", // Language to be used for map labels
         },
         {
             "name": "mapbox",
             "style": "mapbox",
-            "bounds": "-54.28772,3.11460,-54.03630,3.35025",
-            "zoom_level": "16",
-            "mapbox_style": "luandro/clryy7mbc018u01p1a68026nl",
+            "bounds": "-60,0,-59,1",
+            "maxzoom": "16",
+            "mapbox_style": "mapbox/satellite-v9",
             "apiKeySecret": "MAPBOX_API_KEY"
         },
         {
             "name": "bing",
             "style": "bing",
-            "bounds": "-54.28772,3.11460,-54.03630,3.35025",
-            "zoom_level": "10"
+            "bounds": "-60,0,-59,1",
+            "maxzoom": "10"
         },
         {
             "name": "esri",
             "style": "esri",
-            "bounds": "-54.28772,3.11460,-54.03630,3.35025",
-            "zoom_level": "10",
+            "bounds": "-60,0,-59,1",
+            "maxzoom": "10",
             "overlay": {
                 "type": "FeatureCollection",
-                "name": "alert",
+                "name": "AOI",
                 "features": [
                     {
                         "geometry": {
                             "coordinates": [
                                 [
                                     [
-                                        -54.25348208981326,
-                                        3.140689896338671
+                                        -59.75,
+                                        0.25
                                     ],
                                     [
-                                        -54.25348208981326,
-                                        3.140600064810259
+                                        -59.25,
+                                        0.25
                                     ],
                                     [
-                                        -54.253841415926914,
-                                        3.140600064810259
+                                        -59.25,
+                                        0.75
                                     ],
                                     [
-                                        -54.25348208981326,
-                                        3.140689896338671
+                                        -59.75,
+                                        0.75
+                                    ],
+                                    [
+                                        -59.75,
+                                        0.25
                                     ]
                                 ]
                             ],

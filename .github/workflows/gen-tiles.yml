@@ -66,6 +66,7 @@ jobs:
           docker run --rm -v ${{ github.workspace }}/outputs:/app/outputs communityfirst/mapgl-tile-renderer:main ${{ env.COMMAND }}
       - name: Copy mbtiles to EDT Cloud
         if: ${{ github.event.inputs.useSSH && github.event.inputs.useSSH != 'false' }}
+
         uses: appleboy/scp-action@v0.1.3
         with:
           host: ${{ github.event.inputs.sshHost }}

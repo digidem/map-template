@@ -2,9 +2,11 @@
 
 [![Generate Tiles](https://github.com/digidem/map-template/actions/workflows/gen-tiles.yml/badge.svg?branch=main)](https://github.com/digidem/map-template/actions/workflows/gen-tiles.yml)
 
-This repository serves as a template for generating map tiles using GitHub Actions and [mapgl-tile-renderer](https://github.com/ConservationMetrics/mapgl-tile-renderer). Once generated, the tiles are automatically uploaded to [Earth Defenders Toolkit Cloud](https://github.com/digidem/edt-cloud) for distribution to partners or for synchronization with Kakawa devices.
+This repository serves as a template for generating map tiles using GitHub Actions and [mapgl-tile-renderer](https://github.com/ConservationMetrics/mapgl-tile-renderer).
 
-To use this template repository effectively, customize the `manifest.json` file according to your project's requirements and configure secrets if using an online source that requires an API key, such as Planet or Mapbox, or want to copy final tiles to a remote cloud server.
+To use this template repository effectively, customize the `manifest.json` file according to your project's requirements and configure secrets if using an online source that requires an API key, such as Planet or Mapbox.
+
+You can configure this template to copy the generated tiles to a remote cloud server. In the example `manifest.json`, the tiles are automatically uploaded to [Earth Defenders Toolkit Cloud](https://github.com/digidem/edt-cloud) for distribution to partners or for synchronization with [Kakawa devices](http://docs.earthdefenderstoolkit.com/).
 
 ## Using This Template
 
@@ -36,24 +38,11 @@ The `manifest.json` file holds the configuration for the tile generation process
 - `name` (required): The base name for the generated `.mbtiles` file.
 - `style` (required): The map style to be used for tile generation. Specify 'self' for a self-provided style or use an online source such as 'mapbox', 'bing', 'planet', or 'esri'.
 - `bounds` (required): The geographical bounds for tile generation, formatted as `"minLongitude,minLatitude,maxLongitude,maxLatitude"`. Use a tool like [boundingbox](https://boundingbox.klokantech.com/) to obtain the values in CSV format.
-- `zoom_level` (required): The max zoom level at which the tiles will be generated. (e.g., `16`).
+- `maxzoom` (required): The maximum zoom level at which the tiles will be generated. (e.g., `16`).
+- `minzoom` (optional): The minimum zoom level for which the tiles will be generated. If not specified, the default minimum zoom level is used.
 - `monthyear` (optional): The month and year for which the Planet tiles are generated, formatted as `YYYY-MM`. This is required if using 'planet' as the online source for tile generation.
-
 - `mapbox_style` (optional): The Mapbox style in the format `<yourusername>/<styleid>`. This is required if using 'mapbox' as the online source for tile generation.
 - `apiKeySecret` (optional): The name of the secret where the API key is stored. Defaults to `API_KEY` if not specified.
-- `minzoom` (optional): The minimum zoom level for which the tiles will be generated. If not specified, the default minimum zoom level is used.
-- `maxzoom` (optional): The maximum zoom level for which the tiles will be generated. This should not exceed the `zoom_level` specified.
-- `tile_format` (optional): The format of the tiles to generate (e.g., "png", "jpg"). Defaults to the format specified by the tile rendering service.
-- `scale` (optional): The scale factor for the tiles, which is useful for generating @2x tiles for retina displays.
-- `tile_size` (optional): The size of the tiles in pixels (e.g., "256", "512"). Defaults to the size specified by the tile rendering service.
-- `attribution` (optional): The attribution to be included in the tiles' metadata. This is important for copyright and licensing information.
-- `logo` (optional): The URL to a logo image to be included in the tiles' metadata. This can be used for branding purposes.
-- `center` (optional): The center of the map in "longitude,latitude,zoom" format. This is used to set the initial view when the map is loaded.
-- `pixel_ratio` (optional): The pixel ratio to consider for retina displays. This is used in conjunction with the `scale` option.
-- `language` (optional): The language to be used for map labels. This is important for localization and providing maps in the user's preferred language.
-
-
-Example options for `manifest.json`:
 
 ## Workflow Overview
 
