@@ -1,4 +1,4 @@
-name: Generate Tiles
+name: Generate Tiles from Input
 
 on:
   workflow_dispatch:
