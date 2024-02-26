@@ -12,9 +12,11 @@ on:
         required: true
       bounds:
         description: 'Geographical bounds for the tile generation in "minLongitude,minLatitude,maxLongitude,maxLatitude" format'
+        default: '-54.28772,3.11460,-54.03630,3.35025'
         required: true
       zoom_level:
         description: 'Zoom level for which the tiles will be generated'
+        default: '15'
         required: true
       monthyear:
         description: 'Month and year for which the tiles are generated, in YYYY-MM format'
