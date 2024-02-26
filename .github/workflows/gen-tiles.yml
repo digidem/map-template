@@ -34,28 +34,6 @@ on:
       tile_format:
         description: 'Format of the tiles to generate (e.g., "png", "jpg")'
         required: false
-      scale:
-        description: 'Scale factor for the tiles (e.g., "1", "2" for @2x tiles)'
-        required: false
-      tile_size:
-        description: 'Size of the tiles in pixels (e.g., "256", "512")'
-        required: false
-      attribution:
-        description: 'Attribution to be included in the tiles metadata'
-        required: false
-      logo:
-        description: 'URL to a logo image to be included in the tiles metadata'
-        required: false
-      center:
-        description: 'Center of the map in "longitude,latitude,zoom" format'
-        required: false
-      pixel_ratio:
-        description: 'Pixel ratio to consider for retina displays'
-        required: false
-      language:
-        description: 'Language to be used for map labels'
-        required: false
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
